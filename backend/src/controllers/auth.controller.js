@@ -1,3 +1,4 @@
+import { decrypt } from "dotenv";
 import { generateToken } from "../lib/utils.js";
 import User from "../models/user.models.js";
 import bcrypt from "bcryptjs";
@@ -48,8 +49,36 @@ export const signup = async (req, res) => {
   }
 };
 
-export const login = (req, res) => {
-    res.send("login route here")
+export const login = async (req, res) => {
+  const { email, password } = req.body
+
+  try {
+    if(!email || !password ){
+      return res.status(400).json({ message: "All Fields are Necessary"})      
+    }
+    const currentUser = await User.findOne({ email })
+    if (!currentUser){
+      return res.status(400).json({ message: "Invalid Credential!" });
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, currentUser.password)
+    if (!isPasswordCorrect){
+      return res.status(400).json({ message: "Invalid Credential!" });
+    }
+
+    generateToken(currentUser._id, res)
+
+    res.status(200).json({
+      _id: currentUser._id,
+      email: currentUser.email,
+      fullName: currentUser.fullName,
+      profilePic: currentUser.profilePic,
+    })
+
+  } catch (err) {
+    console.log("error in login controller: ", err.message)
+    res.status(500).json({ message: "Internal Server Error!" })
+  }
 }
 export const logout = (req, res) => {
     res.send("logout route here")
